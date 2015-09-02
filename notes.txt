@@ -1,0 +1,8 @@
+1 min - Hva er GPGPU?
+1 min - Hva er WebCL (og OpenGL ES compute shaders) og når kommer det?
+30 s - Forklare hva slags problem vi skal beregne
+	Har en STOR liste med GPS-koordinater i Norge
+	Skal telle hvor mange av koordinatene er mindre enn 200 km fra Oslo
+30 s - Vise frem koden i JavaScript
+2 min - Vise frem koden i WebGL
+30 s - Måle hvor raske de er
