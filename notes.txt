@@ -1,8 +1,43 @@
+Ta med laserpeker eller pekestokk
+
 1 min - Hva er GPGPU?
+	GPU = skjermkortet i PC-en
+	Brukes egentlig til spill
+	Men har over tiden blitt veldig kraftig
+	bilde: CPU cores vs GPU cores
+	General purpose computing on GPU (GPGPU) er å prøve å bruke GPU-en til mer enn bare spill
+	Vi kan f.eks. regne ut ting!
+30 s - Hvor mye raskere kan det gå?
+	Regneeksempel:
+		CPU (Intel i7-990X)
+			6 kjerner 3.47 GHz
+		GPU (nVidia GeForce GTX 980)
+			2048 kjerner 1.126 GHz
+		(2048*1.126)/(6*3.47) = 110!
 1 min - Hva er WebCL (og OpenGL ES compute shaders) og når kommer det?
+	Er det mulig å gjøre GPGPU i frontenden fra javascript?
+	Nei, ikke helt enda!
+	Det finnes WebCL, som er et API for GPGPU i javascript, men ingen nettlesere støtter det enda.
+	Det finnes OpenGL for Embedded Systems versjon 3.1, som har compute shaders. Men det er kun versjon 2.0 som støttes i nettlesere. 
+	
+	Så, er teknologien tilgjengelig enda? Nei!
+	Skal vi gjøre det allikevel? Ja!
+	
+	Vi skal hacke det til med WebGL.
+	
+	WebGL er det samme som OpenGL ES versjon 2.0, og er et API for 3d-grafikk i browseren. Støttes av alle nettlesere.
+	
+	Det er ment for grafikk, ikke for vanlige beregninger.
 30 s - Forklare hva slags problem vi skal beregne
-	Har en STOR liste med GPS-koordinater i Norge
-	Skal telle hvor mange av koordinatene er mindre enn 200 km fra Oslo
+	Har en liste med GPS-koordinater til flere tusen steder i Norge
+	For hvert sted
+		Regn ut summen av avstanden til alle de andre stedene
+	Tell hvor mange av summene som er mindre enn X km
 30 s - Vise frem koden i JavaScript
 2 min - Vise frem koden i WebGL
+30 s - Vise hvilken hardware jeg har
+	Thinkpaden:
+		CPU: Intel Core i7-3667
+		GPU: Intel HD Graphics 4000
 30 s - Måle hvor raske de er
+	*crash cymball*
