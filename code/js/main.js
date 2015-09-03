@@ -1,7 +1,7 @@
 main = function() {
     resolution = 64;
 	debug = resolution <= 16;
-	distance_limit = resolution*resolution*(10/2);
+	distance_limit = resolution*resolution*(100/2);
 	
 	var cymball = new Audio('./lib/NOOJNT1B_crash.aif.mp3');
 	//var drumroll = new Worker("./js/drumroll.js");
@@ -19,8 +19,8 @@ main = function() {
     // Trondheim: Latitude: 63.430515 | Longitude: 10.395053 (337 km)
 	var oslo = [59.913869, 10.752245];
 	
-	var latInput = makeArray(resolution, function() {return 60 + Math.random()*10;});
-	var lonInput = makeArray(resolution, function() {return 10 + Math.random()*10;});
+	var latInput = makeArray(resolution, function() {return 60 + Math.random()*100;});
+	var lonInput = makeArray(resolution, function() {return 10 + Math.random()*100;});
 	
 	console.log("transferring data to the GPU ...");
 	time();
