@@ -14,6 +14,8 @@ Ta med laserpeker eller pekestokk
 		GPU (nVidia GeForce GTX 980)
 			2048 kjerner 1.126 GHz
 		(2048*1.126)/(6*3.47) = 110!
+		
+	I tillegg er minnet på GPU-en satt opp helt annerledes enn for CPU-en, og det kan gi mye mer speedup.
 1 min - Hva er WebCL (og OpenGL ES compute shaders) og når kommer det?
 	Er det mulig å gjøre GPGPU i frontenden fra javascript?
 	Nei, ikke helt enda!
