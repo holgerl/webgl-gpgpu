@@ -1,10 +1,9 @@
 main = function() {
-    resolution = 64;
+    resolution = 80;
 	debug = resolution <= 16;
 	distance_limit = resolution*resolution*(100/2);
 	
 	var cymball = new Audio('./lib/NOOJNT1B_crash.aif.mp3');
-	//var drumroll = new Worker("./js/drumroll.js");
 	
 	console.log("warming up GPU ...");
 	oldDebug = debug; debug = false; 
@@ -45,7 +44,6 @@ main = function() {
 	var resultCpuTime = time();
 	console.log("RESULT CPU: " + count + " (" + resultCpuTime + " ms)");
 	
-	//drumroll.postMessage("stop");
 	cymball.play()
 	
 	var speedup = Math.floor(resultCpuTime/resultGpuTime);

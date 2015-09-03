@@ -15,12 +15,17 @@ Ta med laserpeker eller pekestokk
 			2048 kjerner 1.126 GHz
 		(2048*1.126)/(6*3.47) = 110!
 		
-	I tillegg er minnet på GPU-en satt opp helt annerledes enn for CPU-en, og det kan gi mye mer speedup.
+	I tillegg er minnet på GPU-en satt opp helt annerledes enn for CPU-en, og det kan gi masse mer speedup.
+	
+	Særdeles praktisk eksempel:
+		1100 paintballpistoler (80 ms): https://www.youtube.com/watch?v=3nUYg8b9UCQ
+	Enda et bra eksempel:
+		https://www.youtube.com/watch?v=nHc288IPFzk
 1 min - Hva er WebCL (og OpenGL ES compute shaders) og når kommer det?
 	Er det mulig å gjøre GPGPU i frontenden fra javascript?
 	Nei, ikke helt enda!
 	Det finnes WebCL, som er et API for GPGPU i javascript, men ingen nettlesere støtter det enda.
-	Det finnes OpenGL for Embedded Systems versjon 3.1, som har compute shaders. Men det er kun versjon 2.0 som støttes i nettlesere. 
+	Det finnes OpenGL for Embedded Systems versjon 3.1, som har compute shaders. Men det er kun versjon 2.0 som støttes i nettlesere nå. 
 	
 	Så, er teknologien tilgjengelig enda? Nei!
 	Skal vi gjøre det allikevel? Ja!
@@ -28,8 +33,7 @@ Ta med laserpeker eller pekestokk
 	Vi skal hacke det til med WebGL.
 	
 	WebGL er det samme som OpenGL ES versjon 2.0, og er et API for 3d-grafikk i browseren. Støttes av alle nettlesere.
-	
-	Det er ment for grafikk, ikke for vanlige beregninger.
+	Det er ment for grafikk, ikke for vanlige programmer.
 30 s - Forklare hva slags problem vi skal beregne
 	Har en liste med GPS-koordinater til flere tusen steder i Norge
 	For hvert sted
@@ -41,5 +45,8 @@ Ta med laserpeker eller pekestokk
 	Thinkpaden:
 		CPU: Intel Core i7-3667
 		GPU: Intel HD Graphics 4000
+	Aceren:
+		CPU: Intel Core i7-4500U
+		GPU: Nvidia Geforce GT 750M
 30 s - Måle hvor raske de er
 	*crash cymball*
