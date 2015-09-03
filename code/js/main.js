@@ -1,3 +1,54 @@
+main = function() {
+    resolution = 40;
+	debug = resolution <= 16;
+	distance_limit = resolution*resolution*(10/2);
+	
+	var cymball = new Audio('./lib/NOOJNT1B_crash.aif.mp3');
+	//var drumroll = new Worker("./js/drumroll.js");
+	
+    console.log("creating input data ...");
+	
+    // Oslo: Latitude: 59.913869 | Longitude: 10.752245
+    // Lilehammer: Latitude: 61.115271 | Longitude: 10.466231 (183 km)
+    // Trondheim: Latitude: 63.430515 | Longitude: 10.395053 (337 km)
+	var oslo = [59.913869, 10.752245];
+	
+	var latInput = makeArray(resolution, function() {return 60 + Math.random()*10;});
+	var lonInput = makeArray(resolution, function() {return 10 + Math.random()*10;});
+	
+	console.log("transferring data to the GPU ...");
+	time();
+	
+	setupGpu(latInput, lonInput, oslo);
+	
+	var intermediateGpuTime = time();
+	console.log("transfer GPU done (" + intermediateGpuTime + " ms)");
+	
+	console.log("calculating result on the GPU ...");
+     
+    count = gpuImpl();
+	
+	var resultGpuTime = intermediateGpuTime + time();
+	console.log("RESULT GPU: " + count + " (" + resultGpuTime + " ms)");
+	
+	console.log("calculating result on the CPU ...");
+	time();
+	
+	count = cpuImpl(latInput, lonInput, oslo);
+	
+	var resultCpuTime = time();
+	console.log("RESULT CPU: " + count + " (" + resultCpuTime + " ms)");
+	
+	//drumroll.postMessage("stop");
+	cymball.play()
+	
+	var speedup = Math.floor(resultCpuTime/resultGpuTime);
+	console.log("SPEEDUP: " + speedup + "X");
+	
+	console.log(beginGenerator("SPEEDUP"));
+	console.log(beginGenerator("  " + speedup + "X"));
+}
+
 printArray = function(array, dimension) {
     for (var i = 0; i < array.length; i += dimension) {
         var line = i/dimension + ": ";
@@ -23,36 +74,18 @@ makeArray = function(resolution, callback) {
 	}
 	return array;
 }
- 
-main = function() {
-    resolution = 32;
-	debug = resolution <= 16;
-	distance_limit = resolution*resolution*(10/2);
-	
-    renderer = new THREE.WebGLRenderer();
+
+setupGpu = function(latInput, lonInput, oslo) {
+	renderer = new THREE.WebGLRenderer();
     renderer.setClearColor(0x000000, 1);
     renderer.setSize(resolution, resolution);
     renderer.domElement.setAttribute('id', 'renderer');
     document.body.appendChild(renderer.domElement);
      
-    var texture = new THREE.WebGLRenderTarget(resolution, resolution, {minFilter: THREE.LinearFilter, magFilter: THREE.LinearFilter, format: THREE.RGBFormat});
+    texture = new THREE.WebGLRenderTarget(resolution, resolution, {minFilter: THREE.LinearFilter, magFilter: THREE.LinearFilter, format: THREE.RGBFormat});
      
-    var textureCamera = new THREE.OrthographicCamera(-resolution/2, resolution/2, resolution/2, -resolution/2, -100, 100);
+    textureCamera = new THREE.OrthographicCamera(-resolution/2, resolution/2, resolution/2, -resolution/2, -100, 100);
     textureCamera.position.z = 10;	
-	
-	console.log("creating input data ...");
-	
-	var oslo = [59.913869, 10.752245];
-
-    // Oslo: Latitude: 59.913869 | Longitude: 10.752245
-    // Lilehammer: Latitude: 61.115271 | Longitude: 10.466231 (183 km)
-    // Trondheim: Latitude: 63.430515 | Longitude: 10.395053 (337 km)
-	
-	var latInput = makeArray(resolution, function() {return 60 + Math.random()*10;});
-	var lonInput = makeArray(resolution, function() {return 10 + Math.random()*10;});
-	
-	console.log("transferring data to the GPU ...");
-	time();
 	
     var latMap = createMap(latInput, resolution);
     var lonMap = createMap(lonInput, resolution);
@@ -62,20 +95,17 @@ main = function() {
 	if (debug) console.log(" --- LONGITUDES:")
     if (debug) printArray(lonMap.image.data, 4);
     
-    var textureScene = new THREE.Scene();
+    textureScene = new THREE.Scene();
     var plane = new THREE.Mesh(
         new THREE.PlaneGeometry(resolution, resolution), 
         new textureGeneratorMaterial(latMap, lonMap, oslo)
     );
     plane.position.z = -10;
     textureScene.add(plane);
-	
-	var intermediateGpuTime = time();
-	console.log("transfer GPU done (" + intermediateGpuTime + " ms)");
-	
-	console.log("calculating result on the GPU ...");
-     
-    renderer.render(textureScene, textureCamera, texture, true);
+}
+
+gpuImpl = function() {
+	renderer.render(textureScene, textureCamera, texture, true);
 	 
     var buffer = new Uint8Array(resolution * resolution * 4);
     var gl = renderer.getContext();
@@ -90,22 +120,7 @@ main = function() {
 		if (value <= distance_limit) count++;
 	}
 	
-	var resultGpuTime = intermediateGpuTime + time();
-	console.log("RESULT GPU: " + count + " (" + resultGpuTime + " ms)");
-	
-	console.log("calculating result on the CPU ...");
-	time();
-	
-	count = cpuImpl(latInput, lonInput, oslo);
-	
-	var resultCpuTime = time();
-	console.log("RESULT CPU: " + count + " (" + resultCpuTime + " ms)");
-	
-	var speedup = Math.floor(resultCpuTime/resultGpuTime);
-	console.log("SPEEDUP: " + speedup + "X");
-	
-	console.log(beginGenerator("SPEEDUP"));
-	console.log(beginGenerator("  " + speedup + "X"));
+	return count;
 }
 
 cpuImpl = function(latInput, lonInput, oslo) {
