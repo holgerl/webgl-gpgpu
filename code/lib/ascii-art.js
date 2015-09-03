@@ -1,19 +1,5 @@
 // stolen from http://www.csgnetwork.com/directasciiartgenerator.html and slightly modified
 
-function hideAllPreviews() {style1.style.display = "none"; style2.style.display = "none"; style3.style.display = "none"}
-document.onkeydown = hideAllPreviews;
-document.onmousedown = hideAllPreviews;
-
-function previewStyle() {
-if (!document.all){
-alert("You need IE 4+ to preview style!")
-return
-}
-  if(document.ascii.textStyle[0].selected&&document.all) {style1.style.display = ""; style1.style.top = (windowMarker.offsetTop+20); style1.style.left = (screen.width / 3)}
-  if(document.ascii.textStyle[1].selected&&document.all) {style2.style.display = ""; style2.style.top = (windowMarker.offsetTop+20); style2.style.left = (screen.width / 4)}
-  if(document.ascii.textStyle[2].selected&&document.all) {style3.style.display = ""; style3.style.top = (windowMarker.offsetTop+20); style3.style.left = (screen.width / 4)}
-}
-
 function beginGenerator(inputText) {
   var validChars = true;
 
