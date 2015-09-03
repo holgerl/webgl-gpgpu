@@ -1,10 +1,16 @@
 main = function() {
-    resolution = 40;
+    resolution = 64;
 	debug = resolution <= 16;
 	distance_limit = resolution*resolution*(10/2);
 	
 	var cymball = new Audio('./lib/NOOJNT1B_crash.aif.mp3');
 	//var drumroll = new Worker("./js/drumroll.js");
+	
+	console.log("warming up GPU ...");
+	oldDebug = debug; debug = false; 
+	setupGpu(makeArray(resolution, function() {return 1.0;}), makeArray(resolution, function() {return 1.0;}), [0,0]);
+	gpuImpl();
+	debug = oldDebug;
 	
     console.log("creating input data ...");
 	
@@ -76,7 +82,7 @@ makeArray = function(resolution, callback) {
 }
 
 setupGpu = function(latInput, lonInput, oslo) {
-	renderer = new THREE.WebGLRenderer();
+	renderer = window.renderer || new THREE.WebGLRenderer();
     renderer.setClearColor(0x000000, 1);
     renderer.setSize(resolution, resolution);
     renderer.domElement.setAttribute('id', 'renderer');
@@ -98,7 +104,7 @@ setupGpu = function(latInput, lonInput, oslo) {
     textureScene = new THREE.Scene();
     var plane = new THREE.Mesh(
         new THREE.PlaneGeometry(resolution, resolution), 
-        new textureGeneratorMaterial(latMap, lonMap, oslo)
+        textureGeneratorMaterial(latMap, lonMap, oslo)
     );
     plane.position.z = -10;
     textureScene.add(plane);
@@ -136,8 +142,10 @@ cpuImpl = function(latInput, lonInput, oslo) {
 			var otherLat = latInput[j];
 			var otherLon = lonInput[j];
 			
-			var diff = [lat - otherLat, lon - otherLon];
-			var distance = Math.sqrt(diff[0]*diff[0] + diff[1]*diff[1]);
+			var diffLat = lat - otherLat;
+			var diffLon = lon - otherLon;
+			
+			var distance = Math.sqrt(diffLat*diffLat + diffLon*diffLon);
 			
 			total += distance;
 		}
