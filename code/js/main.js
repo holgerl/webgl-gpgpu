@@ -8,7 +8,7 @@ printArray = function(array, dimension) {
             line += array[i+j] + " ";
         }
          
-        line += fromIEEE754Single([array[i], array[i+1], array[i+2], 0]);
+        line += fromIEEE754Single([array[i], array[i+1], array[i+2], array[i+2]]);
         console.log(line);
     }
 }
@@ -25,15 +25,17 @@ time = function() {
 }
 
 makeArray = function(resolution, callback) {
-	var array = [];
+	var array = new Float32Array(resolution*resolution);
 	for (var i = 0; i < resolution*resolution; i++) {
-		array.push(callback());
+		array[i] = callback();
 	}
 	return array;
 }
  
 SS.main.generateTextures = function() {
-    resolution = 8;
+    resolution = 80;
+	debug = resolution <= 16;
+	distance_limit = resolution*resolution*(10/2);
 	
     renderer = new THREE.WebGLRenderer();
     renderer.setClearColor(0x000000, 1);
@@ -50,11 +52,12 @@ SS.main.generateTextures = function() {
 	
 	var oslo = [59.913869, 10.752245];
 
+    // Oslo: Latitude: 59.913869 | Longitude: 10.752245
     // Lilehammer: Latitude: 61.115271 | Longitude: 10.466231 (183 km)
     // Trondheim: Latitude: 63.430515 | Longitude: 10.395053 (337 km)
 	
-	var latInput = makeArray(resolution, function() {return 60 + Math.random()*5;});
-	var lonInput = makeArray(resolution, function() {return 10 + Math.random()*1;});
+	var latInput = makeArray(resolution, function() {return 60 + Math.random()*10;});
+	var lonInput = makeArray(resolution, function() {return 10 + Math.random()*10;});
 	
 	console.log("calculating result on the GPU ...");
 	time();
@@ -65,9 +68,9 @@ SS.main.generateTextures = function() {
     //var lonMap = createMap(function() {return Math.random();}, resolution);
 	
     console.log(" --- LATITUDES:")
-    printArray(latMap.image.data, 3);
+    if (debug) printArray(latMap.image.data, 4);
 	console.log(" --- LONGITUDES:")
-    printArray(lonMap.image.data, 3);
+    if (debug) printArray(lonMap.image.data, 4);
     
     var textureScene = new THREE.Scene();
     var plane = new THREE.Mesh(
@@ -78,34 +81,43 @@ SS.main.generateTextures = function() {
     textureScene.add(plane);
      
     renderer.render(textureScene, textureCamera, texture, true);
-     
-	console.log("INTERMEDIATE GPU (" + time() + " ms)");
+    
+	var intermediateGpuTime = time();
+	console.log("INTERMEDIATE GPU (" + intermediateGpuTime + " ms)");
 	 
     var buffer = new Uint8Array(resolution * resolution * 4);
     var gl = renderer.getContext();
     gl.readPixels(0, 0, resolution, resolution, gl.RGBA, gl.UNSIGNED_BYTE, buffer);
      
     console.log(" --- OUTPUT:")
-    printArray(buffer, 4);
+    if (debug) printArray(buffer, 4);
 	
 	var count = 0;
 	for (var i = 0; i < buffer.length; i += 4) {
-		var value = fromIEEE754Single([buffer[i], buffer[i+1], buffer[i+2], 0]);
-		if (value <= resolution*resolution*1.5) count++;
+		var value = fromIEEE754Single([buffer[i], buffer[i+1], buffer[i+2], buffer[i+3]]);
+		if (value <= distance_limit) count++;
 	}
 	
-	console.log("RESULT GPU: " + count + " (" + time() + " ms)");
+	var resultGpuTime = time();
+	console.log("RESULT GPU: " + count + " (" + resultGpuTime + " ms)");
 	
 	console.log("calculating result on the CPU ...");
 	time();
 	
 	count = cpuImpl(latInput, lonInput, oslo);
 	
-	console.log("RESULT CPU: " + count + " (" + time() + " ms)");
+	var resultCpuTime = time();
+	console.log("RESULT CPU: " + count + " (" + resultCpuTime + " ms)");
+	
+	var speedup = Math.floor(resultCpuTime/(intermediateGpuTime+resultGpuTime));
+	console.log("SPEEDUP: " + speedup + "X");
+	
+	console.log(beginGenerator("SPEEDUP"));
+	console.log(beginGenerator(speedup + "X"));
 }
 
 cpuImpl = function(latInput, lonInput, oslo) {
-	var buffer = [];
+	var buffer = new Float32Array(latInput.length);
 	
 	for (var i in latInput) {
 		var lat = latInput[i];
@@ -129,16 +141,16 @@ cpuImpl = function(latInput, lonInput, oslo) {
 			foo *= Math.pow(1.01, distance);
 		}*/
 		
-		buffer.push(total);
+		buffer[i] = total;
 	}
 	
 	var count = 0;
 	for (var i = 0; i < buffer.length; i++) {
 		var value = buffer[i];
-		if (value <= resolution*resolution*1.5) count++;
+		if (value <= distance_limit) count++;
 	}
 	
-	console.log(buffer);
+	if (debug) console.log(buffer);
 	
 	return count;
 }
@@ -192,8 +204,8 @@ SS.main.textureGeneratorMaterial = function(latMap, lonMap, oslo) {
 			vec4 latBytes = texture2D(latMap, vUvInverted)*255.0;\n\
 			vec4 lonBytes = texture2D(lonMap, vUvInverted)*255.0;\n\
 			\
-			float lat = decode32(vec4(latBytes.r, latBytes.g, latBytes.b, 0.0));\n\
-            float lon = decode32(vec4(lonBytes.r, lonBytes.g, lonBytes.b, 0.0));\n\
+			float lat = decode32(vec4(latBytes.r, latBytes.g, latBytes.b, latBytes.a));\n\
+            float lon = decode32(vec4(lonBytes.r, lonBytes.g, lonBytes.b, lonBytes.a));\n\
 			\
 			/*TODO: Convert lat/lon to 3D coordinates to get the real distance*/\
 			\
@@ -201,13 +213,13 @@ SS.main.textureGeneratorMaterial = function(latMap, lonMap, oslo) {
             float distance = 0.0;\n\
 			\
 			\
-			for (float i = 0.5; i < 8.0; i++) {\n\
-				for (float j = 0.5; j < 8.0; j++) {\n\
+			for (float i = 0.5; i < "+resolution+".0; i++) {\n\
+				for (float j = 0.5; j < "+resolution+".0; j++) {\n\
 					vec4 otherLatBytes = texture2D(latMap, vec2(i/resolution, 1.0-(j/resolution)))*255.0;\n\
 					vec4 otherLonBytes = texture2D(lonMap, vec2(i/resolution, 1.0-(j/resolution)))*255.0;\n\
 					\
-					float otherLat = decode32(vec4(otherLatBytes.r, otherLatBytes.g, otherLatBytes.b, 0.0));\n\
-					float otherLon = decode32(vec4(otherLonBytes.r, otherLonBytes.g, otherLonBytes.b, 0.0));\n\
+					float otherLat = decode32(vec4(otherLatBytes.r, otherLatBytes.g, otherLatBytes.b, otherLatBytes.a));\n\
+					float otherLon = decode32(vec4(otherLonBytes.r, otherLonBytes.g, otherLonBytes.b, otherLonBytes.a));\n\
 					\
 					vec2 otherCoordinates = vec2(otherLat, otherLon);\n\
 					distance += length(otherCoordinates - coordinates);\n\
@@ -218,7 +230,7 @@ SS.main.textureGeneratorMaterial = function(latMap, lonMap, oslo) {
 			\
 			vec4 distanceBytes = encode32(distance) / 255.0;\n\
 			\
-			gl_FragColor = vec4(distanceBytes.x, distanceBytes.y, distanceBytes.z, 1.0);\n\
+			gl_FragColor = vec4(distanceBytes.x, distanceBytes.y, distanceBytes.z, distanceBytes.w);\n\
 			\
         }\
     ";
@@ -233,32 +245,26 @@ SS.main.textureGeneratorMaterial = function(latMap, lonMap, oslo) {
     return new THREE.ShaderMaterial({
         uniforms: uniforms,
         vertexShader: vertexShader,
-        fragmentShader: fragmentShader,
-        transparent: true,
-        depthWrite: false
+        fragmentShader: fragmentShader
     });
 }
  
 var createMap = function(input, resolution) {
-    var map = THREE.ImageUtils.generateDataTexture(resolution, resolution, new THREE.Color(0x000000)); // TODO: Use RGBA texture and 4 byte floats
-     
-    var width = map.image.width;
-    var height = map.image.height;
-    var nofPixels = width*height;
- 
-    for (var i = 0; i < nofPixels; i++) {       
-        var x = i%width;
-        var y = Math.floor(i/width);
-         
+	var input8bit = new Uint8Array(resolution * resolution * 4);
+	
+	for (var i = 0; i < resolution * resolution; i++){
         var val = input[i];
-         
+        
         var valBytes = toIEEE754Single(val);
-         
-        map.image.data[i*3] = valBytes[0];
-        map.image.data[i*3+1] = valBytes[1];
-        map.image.data[i*3+2] = valBytes[2];
-    }
-     
-    map.needsUpdate = true;
+		
+		input8bit[4*i + 0] = valBytes[0];
+		input8bit[4*i + 1] = valBytes[1];
+		input8bit[4*i + 2] = valBytes[2];
+		input8bit[4*i + 3] = valBytes[3];
+	}
+
+	var map = new THREE.DataTexture(input8bit, resolution, resolution, THREE.RGBAFormat);
+	map.needsUpdate = true;
+	
     return map;
 }
