@@ -1,6 +1,3 @@
-window.SS = window.SS || {};
-SS.main = SS.main || {};
- 
 printArray = function(array, dimension) {
     for (var i = 0; i < array.length; i += dimension) {
         var line = i/dimension + ": ";
@@ -11,11 +8,6 @@ printArray = function(array, dimension) {
         line += fromIEEE754Single([array[i], array[i+1], array[i+2], array[i+2]]);
         console.log(line);
     }
-}
- 
-SS.main.main = function() {
- 
-    SS.main.generateTextures();
 }
 
 time = function() {
@@ -32,8 +24,8 @@ makeArray = function(resolution, callback) {
 	return array;
 }
  
-SS.main.generateTextures = function() {
-    resolution = 80;
+main = function() {
+    resolution = 32;
 	debug = resolution <= 16;
 	distance_limit = resolution*resolution*(10/2);
 	
@@ -59,37 +51,37 @@ SS.main.generateTextures = function() {
 	var latInput = makeArray(resolution, function() {return 60 + Math.random()*10;});
 	var lonInput = makeArray(resolution, function() {return 10 + Math.random()*10;});
 	
-	console.log("calculating result on the GPU ...");
+	console.log("transferring data to the GPU ...");
 	time();
 	
     var latMap = createMap(latInput, resolution);
     var lonMap = createMap(lonInput, resolution);
-	//var latMap = createMap(function() {return Math.random();}, resolution);
-    //var lonMap = createMap(function() {return Math.random();}, resolution);
 	
-    console.log(" --- LATITUDES:")
+    if (debug) console.log(" --- LATITUDES:")
     if (debug) printArray(latMap.image.data, 4);
-	console.log(" --- LONGITUDES:")
+	if (debug) console.log(" --- LONGITUDES:")
     if (debug) printArray(lonMap.image.data, 4);
     
     var textureScene = new THREE.Scene();
     var plane = new THREE.Mesh(
         new THREE.PlaneGeometry(resolution, resolution), 
-        new SS.main.textureGeneratorMaterial(latMap, lonMap, oslo)
+        new textureGeneratorMaterial(latMap, lonMap, oslo)
     );
     plane.position.z = -10;
     textureScene.add(plane);
+	
+	var intermediateGpuTime = time();
+	console.log("transfer GPU done (" + intermediateGpuTime + " ms)");
+	
+	console.log("calculating result on the GPU ...");
      
     renderer.render(textureScene, textureCamera, texture, true);
-    
-	var intermediateGpuTime = time();
-	console.log("INTERMEDIATE GPU (" + intermediateGpuTime + " ms)");
 	 
     var buffer = new Uint8Array(resolution * resolution * 4);
     var gl = renderer.getContext();
     gl.readPixels(0, 0, resolution, resolution, gl.RGBA, gl.UNSIGNED_BYTE, buffer);
      
-    console.log(" --- OUTPUT:")
+    if (debug) console.log(" --- OUTPUT:")
     if (debug) printArray(buffer, 4);
 	
 	var count = 0;
@@ -98,7 +90,7 @@ SS.main.generateTextures = function() {
 		if (value <= distance_limit) count++;
 	}
 	
-	var resultGpuTime = time();
+	var resultGpuTime = intermediateGpuTime + time();
 	console.log("RESULT GPU: " + count + " (" + resultGpuTime + " ms)");
 	
 	console.log("calculating result on the CPU ...");
@@ -109,11 +101,11 @@ SS.main.generateTextures = function() {
 	var resultCpuTime = time();
 	console.log("RESULT CPU: " + count + " (" + resultCpuTime + " ms)");
 	
-	var speedup = Math.floor(resultCpuTime/(intermediateGpuTime+resultGpuTime));
+	var speedup = Math.floor(resultCpuTime/resultGpuTime);
 	console.log("SPEEDUP: " + speedup + "X");
 	
 	console.log(beginGenerator("SPEEDUP"));
-	console.log(beginGenerator(speedup + "X"));
+	console.log(beginGenerator("  " + speedup + "X"));
 }
 
 cpuImpl = function(latInput, lonInput, oslo) {
@@ -135,12 +127,6 @@ cpuImpl = function(latInput, lonInput, oslo) {
 			total += distance;
 		}
 		
-		/*distance = Math.pow(distance, 1.5);
-		var foo = 1.0;
-		for (var i = 0.0; i < 200.0; i++) {
-			foo *= Math.pow(1.01, distance);
-		}*/
-		
 		buffer[i] = total;
 	}
 	
@@ -155,7 +141,7 @@ cpuImpl = function(latInput, lonInput, oslo) {
 	return count;
 }
  
-SS.main.textureGeneratorMaterial = function(latMap, lonMap, oslo) {
+textureGeneratorMaterial = function(latMap, lonMap, oslo) {
     var vertexShader = "\
         varying vec2 vUv;\
         \
@@ -173,7 +159,7 @@ SS.main.textureGeneratorMaterial = function(latMap, lonMap, oslo) {
         uniform sampler2D lonMap;\n\
         " +
 		
-		/* From http://stackoverflow.com/questions/7059962/how-do-i-convert-a-vec4-rgba-value-to-a-float */
+		/* Excerpt from http://stackoverflow.com/questions/7059962/how-do-i-convert-a-vec4-rgba-value-to-a-float : */
 		"vec4 encode32(float f) {\n\
 			float e =5.0;\n\
 			\

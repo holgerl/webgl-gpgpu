@@ -1,4 +1,4 @@
-// from http://www.csgnetwork.com/directasciiartgenerator.html
+// stolen from http://www.csgnetwork.com/directasciiartgenerator.html and slightly modified
 
 function hideAllPreviews() {style1.style.display = "none"; style2.style.display = "none"; style3.style.display = "none"}
 document.onkeydown = hideAllPreviews;
@@ -16,7 +16,6 @@ return
 
 function beginGenerator(inputText) {
   var validChars = true;
-  //var inputText = document.ascii.inputField.value;
 
   inputText = inputText.toLowerCase();
 
