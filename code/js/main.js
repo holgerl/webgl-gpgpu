@@ -33,7 +33,7 @@ makeArray = function(resolution, callback) {
 }
  
 SS.main.generateTextures = function() {
-    var resolution = 512;
+    resolution = 8;
 	
     renderer = new THREE.WebGLRenderer();
     renderer.setClearColor(0x000000, 1);
@@ -64,10 +64,10 @@ SS.main.generateTextures = function() {
 	//var latMap = createMap(function() {return Math.random();}, resolution);
     //var lonMap = createMap(function() {return Math.random();}, resolution);
 	
-    //console.log(" --- LATITUDES:")
-    //printArray(latMap.image.data, 3);
-	//console.log(" --- LONGITUDES:")
-    //printArray(lonMap.image.data, 3);
+    console.log(" --- LATITUDES:")
+    printArray(latMap.image.data, 3);
+	console.log(" --- LONGITUDES:")
+    printArray(lonMap.image.data, 3);
     
     var textureScene = new THREE.Scene();
     var plane = new THREE.Mesh(
@@ -85,13 +85,13 @@ SS.main.generateTextures = function() {
     var gl = renderer.getContext();
     gl.readPixels(0, 0, resolution, resolution, gl.RGBA, gl.UNSIGNED_BYTE, buffer);
      
-    //console.log(" --- OUTPUT:")
-    //printArray(buffer, 4);
+    console.log(" --- OUTPUT:")
+    printArray(buffer, 4);
 	
 	var count = 0;
 	for (var i = 0; i < buffer.length; i += 4) {
 		var value = fromIEEE754Single([buffer[i], buffer[i+1], buffer[i+2], 0]);
-		if (value <= 2.0) count++;
+		if (value <= resolution*resolution*1.5) count++;
 	}
 	
 	console.log("RESULT GPU: " + count + " (" + time() + " ms)");
@@ -111,23 +111,34 @@ cpuImpl = function(latInput, lonInput, oslo) {
 		var lat = latInput[i];
 		var lon = lonInput[i];
 		
-		var diff = [lat - oslo[0], lon - oslo[1]];
-		var distance = Math.sqrt(diff[0]*diff[0] + diff[1]*diff[1]);
+		var total = 0;
 		
-		distance = Math.pow(distance, 1.5);
+		for (var j in latInput) {		
+			var otherLat = latInput[j];
+			var otherLon = lonInput[j];
+			
+			var diff = [lat - otherLat, lon - otherLon];
+			var distance = Math.sqrt(diff[0]*diff[0] + diff[1]*diff[1]);
+			
+			total += distance;
+		}
+		
+		/*distance = Math.pow(distance, 1.5);
 		var foo = 1.0;
 		for (var i = 0.0; i < 200.0; i++) {
 			foo *= Math.pow(1.01, distance);
-		}
+		}*/
 		
-		buffer.push(foo);
+		buffer.push(total);
 	}
 	
 	var count = 0;
 	for (var i = 0; i < buffer.length; i++) {
 		var value = buffer[i];
-		if (value <= 2.0) count++;
+		if (value <= resolution*resolution*1.5) count++;
 	}
+	
+	console.log(buffer);
 	
 	return count;
 }
@@ -145,6 +156,7 @@ SS.main.textureGeneratorMaterial = function(latMap, lonMap, oslo) {
     var fragmentShader = "\
         varying vec2 vUv;\n\
         uniform vec2 oslo;\n\
+        uniform float resolution;\n\
         uniform sampler2D latMap;\n\
         uniform sampler2D lonMap;\n\
         " +
@@ -186,19 +198,25 @@ SS.main.textureGeneratorMaterial = function(latMap, lonMap, oslo) {
 			/*TODO: Convert lat/lon to 3D coordinates to get the real distance*/\
 			\
 			vec2 coordinates = vec2(lat, lon);\n\
-            \
-            float distance = length(coordinates - oslo);\n\
+            float distance = 0.0;\n\
 			\
 			\
-			distance = pow(distance, 1.5);\n\
-			float foo = 1.0;\n\
-			for (float i = 0.0; i < 200.0; i++) {\n\
-				foo *= pow(1.01, distance);\n\
+			for (float i = 0.5; i < 8.0; i++) {\n\
+				for (float j = 0.5; j < 8.0; j++) {\n\
+					vec4 otherLatBytes = texture2D(latMap, vec2(i/resolution, 1.0-(j/resolution)))*255.0;\n\
+					vec4 otherLonBytes = texture2D(lonMap, vec2(i/resolution, 1.0-(j/resolution)))*255.0;\n\
+					\
+					float otherLat = decode32(vec4(otherLatBytes.r, otherLatBytes.g, otherLatBytes.b, 0.0));\n\
+					float otherLon = decode32(vec4(otherLonBytes.r, otherLonBytes.g, otherLonBytes.b, 0.0));\n\
+					\
+					vec2 otherCoordinates = vec2(otherLat, otherLon);\n\
+					distance += length(otherCoordinates - coordinates);\n\
+				}\n\
 			}\n\
 			\
 			\
 			\
-			vec4 distanceBytes = encode32(foo) / 255.0;\n\
+			vec4 distanceBytes = encode32(distance) / 255.0;\n\
 			\
 			gl_FragColor = vec4(distanceBytes.x, distanceBytes.y, distanceBytes.z, 1.0);\n\
 			\
@@ -207,6 +225,7 @@ SS.main.textureGeneratorMaterial = function(latMap, lonMap, oslo) {
      
     var uniforms = {
         oslo: {type: "2f", value: oslo},
+        resolution: {type: "f", value: resolution},
         latMap: {"type": "t", "value": latMap},
         lonMap: {"type": "t", "value": lonMap}
     };
