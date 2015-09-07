@@ -1,4 +1,5 @@
 Ta med laserpeker eller pekestokk
+http://www.slidifier.com/slidifier.html?id=csL4FZvyap
 
 1 min - Hva er GPGPU?
 	GPU = skjermkortet i PC-en
